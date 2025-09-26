@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectConnect - Professional Project Showcase</title>
+    
+    <!-- Placeholder Comments -->
+    <!-- Chosen Palette: Corporate Blue -->
+    <!-- Application Structure Plan: A professional, desktop-first layout inspired by LinkedIn. It features a main 3-column grid with a fixed left sidebar for user info/navigation, a central dynamic feed for project posts, and a placeholder right column. This structure is chosen for its familiarity in professional contexts, promoting clear separation of navigation, content, and auxiliary information, which enhances usability for users focused on portfolio browsing and networking. User flow is driven by view-switching (Feed, Explore, Profile) within the central column. -->
+    <!-- Visualization & Content Choices: 
+        - Project Feed (List of Cards): Goal=Inform/Organize. Method=Structured HTML/CSS Cards. Interaction=Click 'Endorse'. Justification=Familiar, scannable format for a professional feed.
+        - User Profiles (Structured Text/Stats + Chart): Goal=Inform/Monitor. Method=HTML Layout + Chart.js Bar Chart. Interaction=None (Static Monitor). Justification=Bar chart clearly shows comparative performance (likes) for a user's top content.
+        - Explore View (Grid of User Cards): Goal=Organize/Compare. Method=HTML Grid Layout. Interaction=Click 'Connect'. Justification=Easy to browse and compare talent.
+        - Project Demos (Video Element): Goal=Inform. Method=Standard HTML <video> tag. Interaction=Playback controls. Justification=Direct and effective way to showcase technical projects in action.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* The body background-color is controlled by the bg-gray-100 class on the body tag. */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 300px; /* Base height */
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+        /* Animation Canvas Styling */
+        #technical-animation-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.20;
+        }
+
+        /* Notification Styling for smooth entry/exit */
+        #notification-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 50;
+        }
+        .notification {
+            transform: translateY(100%);
+            opacity: 0;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="text-gray-900 bg-gray-100">
+
+    <!-- Top Navigation Bar -->
+    <header id="main-header" class="sticky top-0 z-40 bg-white shadow-md border-b border-gray-200 hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+            <div class="text-2xl font-black tracking-wide text-gray-900 flex items-center cursor-pointer transition-colors hover:text-blue-700" id="logo-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mr-2 text-blue-600" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                <span class="text-blue-600">Project</span>Connect
+            </div>
+            <nav class="hidden md:flex items-center space-x-2" id="desktop-nav"></nav>
+            <div class="md:hidden" id="mobile-nav-profile-icon"></div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <!-- This will be dynamically populated -->
+    </main>
+    
+    <!-- Mobile Bottom Navigation -->
+    <nav id="mobile-bottom-nav" class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 md:hidden shadow-[0_-5px_10px_rgba(0,0,0,0.1)] hidden">
+        <!-- Dynamic content -->
+    </nav>
+    
+    <!-- Create Project Modal (Initially Hidden) -->
+    <div id="create-project-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm hidden">
+        <!-- Modal content will be injected here -->
+    </div>
+
+    <!-- Custom Notification Container -->
+    <div id="notification-container">
+        <!-- Notifications will appear here -->
+    </div>
+
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        // Auth imports
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query, where, getDocs, orderBy, serverTimestamp, addDoc, doc, setDoc, updateDoc, increment, arrayUnion, arrayRemove, getDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --- GLOBAL STATE & CONFIG ---
+        const state = {
+            db: null,
+            auth: null,
+            userId: null,
+            currentUserData: null,
+            allUsers: [],
+            posts: [],
+            view: 'loading', // loading, signin, auth, feed, explore, profile, create
+            isAuthReady: false,
+            error: null,
+            isModalOpen: false,
+            chartInstance: null, // To hold the Chart.js instance
+            animationActive: false, // Flag to control the canvas animation
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-app-id-test';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
+        const API_KEY = ""; // Use local API key if provided, otherwise Canvas will inject it.
+
+        // --- ICONS (as functions returning SVG strings) ---
+        const ICONS = {
+            google: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="${classes}"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.341c-1.637 5.087-6.046 8.899-11.341 8.899-7.382 0-13.38-5.997-13.38-13.38s5.998-13.38 13.38-13.38c3.132 0 5.968 1.118 8.212 2.936l5.241-5.241C36.376 5.547 30.822 3 24.004 3c-11.058 0-20.002 8.944-20.002 20s8.944 20 20.002 20c10.59 0 19.347-8.312 19.347-20 0-1.346-.145-2.651-.371-3.929z"/><path fill="#FF3D00" d="M6.305 28.527l5.241 5.241c2.406 1.77 5.286 2.83 8.212 2.936v-8H6.305z"/><path fill="#4CAF50" d="M24.004 43c-6.195 0-11.777-3.08-15.197-7.854l5.241-5.241c1.55 3.322 4.607 5.567 8.528 5.567 4.795 0 8.824-2.887 10.748-6.909l-7.796-6.045-2.952 2.296h-11.341c.226 1.278.371 2.583.371 3.929 0 11.056-8.944 20-20.002 20z"/><path fill="#1976D2" d="M43.611 20.083V20H24v8h11.341c-.226 1.278-.371 2.583-.371 3.929 0 11.056 8.944 20 20.002 20z"/></svg>`,
+            home: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+            search: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+            plus: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+            user: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+            briefcase: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
+            thumbsUp: (classes = "w-5 h-5", filled = false) => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12h11.2a2.3 2.3 0 0 0 2.3-2.3L22 10.1V8a2 2 0 0 0-2-2h-6.2a2 2 0 0 1-1.4-.6L10 3.4a2 2 0 0 0-1.4-.6H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></svg>`,
+            share: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="17"/></svg>`,
+            gitBranch: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>`,
+            video: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3L21 6V18L16 21L11 18V6L16 3Z"/><path d="M11 18L6 21L1 18V6L6 3L11 6V18Z"/></svg>`,
+            defaultProfile: (classes) => `<div class="bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg ${classes}">${ICONS.user('w-6 h-6')}</div>`,
+            spinner: () => `<div class="spinner mx-auto"></div>`,
+            check: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+            xCircle: (classes = "w-5 h-5") => `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+        };
+
+        // --- CANVAS ANIMATION LOGIC ---
+        let animationFrameId = null;
+
+        function startTechnicalAnimation() {
+            const canvas = document.getElementById('technical-animation-canvas');
+            if (!canvas) return;
+
+            state.animationActive = true;
+            const ctx = canvas.getContext('2d');
+            
+            let width, height, particles;
+            const particleSize = 3;
+            const density = 40; // distance between particles in pixels
+            const connectDistance = 150;
+            
+            function resizeCanvas() {
+                // Set canvas size to match its CSS dimensions
+                width = canvas.width = canvas.offsetWidth;
+                height = canvas.height = canvas.offsetHeight;
+                
+                particles = [];
+                // Create a grid of particles
+                for (let x = 0; x < width; x += density) {
+                    for (let y = 0; y < height; y += density) {
+                        // Add a small jitter and random position offset
+                        const jitterX = (Math.random() - 0.5) * density * 0.5;
+                        const jitterY = (Math.random() - 0.5) * density * 0.5;
+                        particles.push({
+                            x: x + jitterX, 
+                            y: y + jitterY, 
+                            vx: (Math.random() - 0.5) * 0.1, // very slow movement
+                            vy: (Math.random() - 0.5) * 0.1,
+                        });
+                    }
+                }
+            }
+            
+            // Initial setup
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            function draw() {
+                if (!state.animationActive) {
+                    window.removeEventListener('resize', resizeCanvas);
+                    cancelAnimationFrame(animationFrameId);
+                    return;
+                }
+
+                ctx.clearRect(0, 0, width, height);
+
+                // Update and Draw Particles
+                particles.forEach(p => {
+                    // Simple movement and boundary wrap
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.x < 0 || p.x > width) p.vx *= -1;
+                    if (p.y < 0 || p.y > height) p.vy *= -1;
+                    
+                    ctx.fillStyle = '#1e40af'; // Blue-700
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, particleSize, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Draw Connections (Simulated Data Flow)
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const p1 = particles[i];
+                        const p2 = particles[j];
+                        const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+
+                        if (dist < connectDistance) {
+                            // Calculate opacity based on distance
+                            const opacity = 1 - (dist / connectDistance); 
+                            
+                            // Add a flicker effect for "data transfer" simulation
+                            if (Math.random() < 0.005) { // 0.5% chance to "flash" a strong line
+                                 ctx.strokeStyle = `rgba(59, 130, 246, ${1})`; // Full blue-500 flash
+                                 ctx.lineWidth = 1.5;
+                            } else {
+                                 ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.4})`; // Soft blue-500 connection
+                                 ctx.lineWidth = 1;
+                            }
+
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                animationFrameId = requestAnimationFrame(draw);
+            }
+            
+            draw(); // Start the loop
+        }
+
+        // --- HELPER FUNCTIONS ---
+        const formatTimeAgo = (timestamp) => {
+            if (!timestamp) return 'Just now';
+            const seconds = Math.floor((new Date() - timestamp.toDate()) / 1000);
+            if (seconds < 60) return `${seconds}s ago`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        };
+        
+        const truncateLabel = (label) => {
+            if (label.length > 16) {
+                return label.substring(0, 13) + '...';
+            }
+            return label;
+        };
+        
+        // --- UX ENHANCEMENT: TOAST NOTIFICATION ---
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('notification-container');
+            const color = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            const icon = type === 'success' ? ICONS.check('w-5 h-5') : ICONS.xCircle('w-5 h-5');
+            
+            const notification = document.createElement('div');
+            notification.className = `notification p-4 mb-3 rounded-lg shadow-xl text-white font-semibold flex items-center ${color}`;
+            notification.innerHTML = `
+                ${icon}
+                <span class="ml-2">${message}</span>
+            `;
+
+            container.appendChild(notification);
+            
+            // Show animation
+            setTimeout(() => notification.classList.add('show'), 10);
+            
+            // Hide animation and removal
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300); // Wait for transition to finish
+            }, 4000);
+        }
+
+        const callGeminiApi = async (userQuery, systemPrompt) => {
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+            let delay = 1000;
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) return text;
+                        throw new Error("Empty response from AI.");
+                    } else if (response.status === 429 && i < 2) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    } else {
+                        throw new Error(`AI service failed with status: ${response.status}`);
+                    }
+                } catch (e) {
+                    if (i === 2) {
+                        console.error("Gemini API call failed:", e);
+                        throw new Error("Failed to connect to AI service.");
+                    }
+                }
+            }
+        };
+
+        // --- CHARTING LOGIC ---
+        function drawProjectPerformanceChart() {
+            if (state.chartInstance) {
+                state.chartInstance.destroy();
+            }
+
+            const userPosts = state.posts.filter(post => post.userId === state.userId);
+            if (userPosts.length === 0) return;
+
+            // Get top 5 posts by like count
+            const topPosts = userPosts
+                .sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))
+                .slice(0, 5);
+
+            const labels = topPosts.map(p => truncateLabel(p.title));
+            const data = topPosts.map(p => p.likeCount || 0);
+            
+            const ctx = document.getElementById('projectPerformanceChart')?.getContext('2d');
+            if (!ctx) return;
+            
+            state.chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Endorsements',
+                        data: data,
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)', // Tailwind blue-500
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Horizontal bar chart
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Top 5 Project Performance (Endorsements)',
+                            font: { size: 16, weight: 'bold' },
+                            padding: { top: 10, bottom: 10 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Endorsements: ${context.parsed.x}`;
+                                },
+                                title: function(context) {
+                                    // Show full title in tooltip
+                                    const index = context[0].dataIndex;
+                                    return topPosts[index].title;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Endorsements' },
+                            ticks: { precision: 0 }
+                        },
+                        y: {
+                            title: { display: false },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // --- RENDER FUNCTIONS ---
+        const mainContentEl = document.getElementById('main-content');
+        const headerEl = document.getElementById('main-header');
+        const mobileNavEl = document.getElementById('mobile-bottom-nav');
+
+        function render() {
+            // Stop animation if view is not 'signin'
+            if (state.view !== 'signin' && state.animationActive) {
+                state.animationActive = false;
+            }
+
+            // Unhide UI elements once auth is ready AND user is logged in
+            if (state.isAuthReady && state.currentUserData && state.view !== 'auth' && state.view !== 'signin') {
+                headerEl.classList.remove('hidden');
+                mobileNavEl.classList.remove('hidden');
+            } else {
+                 headerEl.classList.add('hidden');
+                 mobileNavEl.classList.add('hidden');
+            }
+            
+            // Render main view
+            switch (state.view) {
+                case 'loading':
+                    mainContentEl.innerHTML = `<div class="text-center py-40 text-blue-600 font-semibold">${ICONS.spinner()} <p class="mt-4">Establishing Secure Connection...</p></div>`;
+                    break;
+                case 'signin':
+                    renderSignIn();
+                    break;
+                case 'auth':
+                    renderProfileSetup();
+                    break;
+                case 'feed':
+                    renderFeed();
+                    break;
+                case 'explore':
+                    renderExplore();
+                    break;
+                case 'profile':
+                    renderProfile();
+                    // Must call chart function AFTER the canvas element is in the DOM
+                    setTimeout(drawProjectPerformanceChart, 0); 
+                    break;
+                case 'create':
+                    renderFeed(); // Fallback to feed view below the modal
+                    renderCreateModal();
+                    break;
+                default:
+                    mainContentEl.innerHTML = `<div class="p-8 bg-red-100 text-red-700 rounded-lg">Error: Unknown view state.</div>`;
+            }
+
+            // Render navigation elements if user is logged in
+            if (state.currentUserData && state.view !== 'auth' && state.view !== 'signin') {
+                renderDesktopNav();
+                renderMobileNav();
+            }
+        }
+
+        function renderLayout(contentHtml) {
+            if (state.currentUserData && state.view !== 'auth') {
+                 mainContentEl.innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <div class="lg:col-span-3 hidden lg:block">
+                            ${renderSidebar()}
+                        </div>
+                        <div class="lg:col-span-6">
+                            ${contentHtml}
+                        </div>
+                        <div class="lg:col-span-3 hidden lg:block">
+                            <div class="sticky top-20 p-4 bg-white rounded-xl shadow-xl border border-gray-200">
+                                <h3 class="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Top Developers</h3>
+                                <p class="text-sm text-gray-500">View the Explore tab to connect with talent.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                mainContentEl.innerHTML = contentHtml; // Full width for setup/signin
+            }
+        }
+        
+        function renderSignIn() {
+             const content = `
+                <div class="min-h-screen flex items-center justify-center p-4 bg-gray-50 absolute inset-0 z-50 overflow-hidden">
+                    <!-- Technical Animation Canvas -->
+                    <canvas id="technical-animation-canvas"></canvas>
+                    
+                    <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-sm border-t-8 border-blue-600 text-center relative z-10 transition duration-300 hover:shadow-blue-300/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto text-blue-600 mb-4" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                        <h2 class="text-3xl font-extrabold text-gray-900 mb-2">Welcome Back!</h2>
+                        <p class="text-gray-600 mb-8">Sign in to share your professional projects.</p>
+                        <button id="google-sign-in-btn" class="w-full mt-4 px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg font-bold shadow-md transition-all hover:bg-gray-100 active:bg-gray-200 flex items-center justify-center">
+                            ${ICONS.google('w-6 h-6 mr-3')} Sign in with Google
+                        </button>
+                        <div id="signin-error" class="hidden bg-red-100 text-red-700 p-3 rounded-lg mt-4 text-sm font-medium border border-red-300"></div>
+                    </div>
+                </div>`;
+            mainContentEl.innerHTML = content;
+            
+            // Start animation after DOM update
+            startTechnicalAnimation(); 
+        }
+
+        function renderProfileSetup() {
+            const roles = ["Student", "Corporate Engineer", "Researcher", "Freelancer", "Educator"];
+            const content = `
+                <div class="min-h-screen flex items-center justify-center p-4 bg-gray-50 absolute inset-0 z-50">
+                    <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-xl border-t-8 border-blue-600 transition duration-300">
+                        <h2 class="text-4xl font-extrabold text-gray-900 mb-2">Almost Done!</h2>
+                        <p class="text-gray-600 mb-8">Create your unique username to complete your professional identity.</p>
+                        <div id="setup-error" class="hidden bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm font-medium border border-red-300"></div>
+                        <div class="space-y-6">
+                            <div class="flex items-center space-x-4">
+                                ${ICONS.defaultProfile('w-16 h-16 mr-6 flex-shrink-0')}
+                                <div class="flex-grow">
+                                    <label class="block text-gray-700 text-sm font-semibold mb-1">Unique Username</label>
+                                    <input type="text" id="username-input" class="w-full p-3 bg-gray-50 text-gray-900 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="Your Professional Handle (e.g., code_ninja)" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">Primary Role/Industry</label>
+                                <select id="role-select" class="w-full p-3 bg-gray-50 text-gray-900 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                                    ${roles.map(r => `<option value="${r}">${r}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">Professional Bio Summary (Max 150 chars)</label>
+                                <div class="relative">
+                                    <textarea id="bio-textarea" class="w-full h-20 p-3 bg-gray-50 text-gray-900 rounded-lg border border-gray-300 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="E.g., Full-Stack Developer passionate about AI and React." maxlength="150"></textarea>
+                                    <p class="text-right text-xs text-gray-500 mt-1"><span id="bio-char-count">0</span>/150</p>
+                                </div>
+                            </div>
+                            <button id="complete-setup-btn" class="w-full mt-8 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold text-lg shadow-xl hover:bg-blue-700 active:bg-blue-800 transition-all transform hover:scale-[1.01]">
+                                Complete Setup & Go to Feed
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            mainContentEl.innerHTML = content;
+            // Attach char counter logic
+            const bioTextarea = document.getElementById('bio-textarea');
+            const charCountSpan = document.getElementById('bio-char-count');
+            if (bioTextarea && charCountSpan) {
+                bioTextarea.addEventListener('input', () => {
+                    charCountSpan.textContent = bioTextarea.value.length;
+                });
+            }
+        }
+
+
+        // --- FIREBASE LOGIC AND AUTHENTICATION ---
+
+        const userCollectionRef = () => collection(state.db, `artifacts/${appId}/public/data/users`);
+        const postCollectionRef = () => collection(state.db, `artifacts/${appId}/public/data/posts`);
+
+        async function fetchOrCreateUserDocument(user) {
+            state.userId = user.uid;
+            const userDocRef = doc(userCollectionRef(), user.uid);
+            try {
+                const docSnap = await getDoc(userDocRef);
+
+                if (docSnap.exists() && docSnap.data().isProfileSetup) {
+                    // User profile exists and is set up, load data and go to feed
+                    state.currentUserData = docSnap.data();
+                    console.log("Existing user loaded:", state.currentUserData);
+                    handleViewChange('feed');
+                } else {
+                    // New user or profile not fully set up, move to profile setup view
+                    const defaultUserData = {
+                        userId: user.uid,
+                        displayName: user.displayName || 'New User',
+                        email: user.email || '',
+                        username: null, 
+                        role: 'Developer',
+                        bio: 'A passionate developer on ProjectConnect.',
+                        isProfileSetup: false,
+                        connections: [],
+                        createdAt: serverTimestamp(),
+                    };
+                    state.currentUserData = docSnap.exists() ? docSnap.data() : defaultUserData; // Keep existing data if doc exists
+                    handleViewChange('auth'); // Go to profile setup
+                }
+            } catch (e) {
+                console.error("Error fetching user document:", e);
+                showNotification("Failed to load user data.", 'error');
+                // Fallback to anonymous sign-in or handle gracefully
+            }
+        }
+
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                state.db = getFirestore(app);
+                state.auth = getAuth(app);
+                
+                // Log levels for Firestore/Auth debugging
+                setLogLevel('Debug');
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(state.auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(state.auth);
+                }
+
+                onAuthStateChanged(state.auth, (user) => {
+                    state.isAuthReady = true;
+                    if (user && !user.isAnonymous) {
+                        fetchOrCreateUserDocument(user);
+                        setupListeners();
+                    } else if (user && user.isAnonymous) {
+                        // If signed in anonymously, prompt for proper sign-in
+                        state.view = 'signin';
+                        state.currentUserData = null;
+                        render();
+                    } else {
+                        // No user (signed out)
+                        state.view = 'signin';
+                        state.currentUserData = null;
+                        state.userId = null;
+                        render();
+                    }
+                });
+
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                state.view = 'signin';
+                showNotification("Failed to connect to backend services.", 'error');
+                render();
+            }
+        }
+
+        async function signInWithGoogle() {
+            try {
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(state.auth, provider);
+                // onAuthStateChanged will handle the rest
+            } catch (error) {
+                console.error("Google Sign-In Error:", error);
+                const errorMessage = document.getElementById('signin-error');
+                if (errorMessage) {
+                    errorMessage.textContent = error.message || "Sign-in failed. Please try again.";
+                    errorMessage.classList.remove('hidden');
+                }
+            }
+        }
+
+        function setupListeners() {
+            // Only proceed if Firebase is initialized
+            if (!state.db) return; 
+
+            // 1. Users Listener
+            const usersQ = query(userCollectionRef());
+            onSnapshot(usersQ, (snapshot) => {
+                state.allUsers = snapshot.docs.map(doc => doc.data());
+                console.log("Users updated:", state.allUsers.length);
+                
+                // Update current user data in case of updates (e.g., bio change)
+                const updatedUser = state.allUsers.find(u => u.userId === state.userId);
+                if (updatedUser) {
+                    state.currentUserData = updatedUser;
+                }
+
+                // Only render if we are not on the signin/loading screen
+                if (state.view !== 'loading' && state.view !== 'signin') render();
+            }, (error) => {
+                console.error("Error listening to users:", error);
+                showNotification("Failed to fetch user list.", 'error');
+            });
+
+            // 2. Posts Listener
+            // NOTE: Firestore does not support ordering without index creation, 
+            // so we will sort in memory for simplicity and better compatibility with the Canvas environment.
+            const postsQ = query(postCollectionRef());
+            onSnapshot(postsQ, (snapshot) => {
+                // Fetch data
+                let rawPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Sort posts by createdAt timestamp descending (newest first) in memory
+                rawPosts.sort((a, b) => {
+                    const aTime = a.createdAt?.toMillis() || 0;
+                    const bTime = b.createdAt?.toMillis() || 0;
+                    return bTime - aTime;
+                });
+
+                state.posts = rawPosts;
+
+                console.log("Posts updated:", state.posts.length);
+                if (state.view !== 'loading' && state.view !== 'signin') render();
+            }, (error) => {
+                console.error("Error listening to posts:", error);
+                showNotification("Failed to fetch project feed.", 'error');
+            });
+        }
+
+        // --- ACTION HANDLERS ---
+
+        function handleViewChange(newView) {
+            if (newView === 'create') {
+                state.isModalOpen = true;
+            } else {
+                state.isModalOpen = false;
+                state.view = newView;
+            }
+            render();
+        }
+
+        async function handleAuthSetup() {
+            const usernameInput = document.getElementById('username-input');
+            const roleSelect = document.getElementById('role-select');
+            const bioTextarea = document.getElementById('bio-textarea');
+            const setupErrorEl = document.getElementById('setup-error');
+            const setupBtn = document.getElementById('complete-setup-btn');
+
+            if (!setupBtn || !usernameInput || !roleSelect || !bioTextarea || !setupErrorEl) return;
+
+            const username = usernameInput.value.trim();
+            const role = roleSelect.value;
+            const bio = bioTextarea.value.trim();
+
+            setupErrorEl.classList.add('hidden');
+            setupBtn.disabled = true;
+            setupBtn.innerHTML = `${ICONS.spinner()} Verifying...`;
+
+            if (username.length < 3 || !/^[a-zA-Z0-9_]{3,16}$/.test(username)) {
+                setupErrorEl.textContent = "Username must be 3-16 characters long and contain only letters, numbers, and underscores.";
+                setupErrorEl.classList.remove('hidden');
+                setupBtn.disabled = false;
+                setupBtn.innerHTML = `Complete Setup & Go to Feed`;
+                return;
+            }
+            
+            try {
+                // 1. Check if username is unique (query the entire public collection)
+                const usersRef = userCollectionRef();
+                const q = query(usersRef, where("username", "==", username));
+                const snapshot = await getDocs(q);
+
+                if (!snapshot.empty) {
+                    setupErrorEl.textContent = `Username @${username} is already taken. Please choose another one.`;
+                    setupErrorEl.classList.remove('hidden');
+                    setupBtn.disabled = false;
+                    setupBtn.innerHTML = `Complete Setup & Go to Feed`;
+                    return;
+                }
+                
+                // 2. Save user document
+                const userDocRef = doc(usersRef, state.userId);
+                const newUserData = {
+                    ...state.currentUserData,
+                    username,
+                    role,
+                    bio,
+                    isProfileSetup: true, // Mark as complete
+                    updatedAt: serverTimestamp(),
+                };
+
+                await setDoc(userDocRef, newUserData, { merge: true });
+
+                state.currentUserData = newUserData; // Update local state
+                showNotification("Profile setup complete! Welcome.");
+                handleViewChange('feed');
+
+            } catch (e) {
+                console.error("Error during profile setup:", e);
+                setupErrorEl.textContent = "An error occurred while saving your profile. Please try again.";
+                setupErrorEl.classList.remove('hidden');
+            } finally {
+                setupBtn.disabled = false;
+                if (state.view === 'auth') { // Only reset button text if still on auth page
+                    setupBtn.innerHTML = `Complete Setup & Go to Feed`;
+                }
+            }
+        }
+
+        async function handleLikePost(postId, isLiked) {
+            if (!state.userId) {
+                showNotification("You must be signed in to endorse a project.", 'error');
+                return;
+            }
+
+            const postDocRef = doc(postCollectionRef(), postId);
+            const updateData = {};
+
+            if (isLiked) {
+                // Unlike/Remove endorsement
+                updateData.likeCount = increment(-1);
+                updateData.likedBy = arrayRemove(state.userId);
+                showNotification("Endorsement retracted.", 'success');
+            } else {
+                // Like/Add endorsement
+                updateData.likeCount = increment(1);
+                updateData.likedBy = arrayUnion(state.userId);
+                showNotification("Project endorsed! Great job.", 'success');
+            }
+
+            try {
+                await updateDoc(postDocRef, updateData);
+            } catch (e) {
+                console.error("Error updating post like:", e);
+                showNotification("Failed to process endorsement.", 'error');
+            }
+        }
+
+        async function handleCreateProject() {
+            const title = document.getElementById('project-title').value.trim();
+            const description = document.getElementById('project-description').value.trim();
+            const type = document.getElementById('project-type').value;
+            const link = document.getElementById('project-link').value.trim();
+            const errorEl = document.getElementById('create-project-error');
+            const submitBtn = document.getElementById('submit-project-btn');
+
+            errorEl.classList.add('hidden');
+
+            if (!title || !description || !link) {
+                errorEl.textContent = "Title, description, and link are required.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            if (!state.currentUserData.isProfileSetup) {
+                 errorEl.textContent = "Please complete your profile setup before posting.";
+                 errorEl.classList.remove('hidden');
+                 return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `${ICONS.spinner()} Posting...`;
+
+            try {
+                // Use Gemini to generate a short, professional summary/tagline
+                const summaryPrompt = `Create a short, punchy, professional tagline (max 10 words) for a project titled "${title}" with the description: "${description}"`;
+                const summary = await callGeminiApi(summaryPrompt, "You are a professional marketing copywriter. Only output the tagline.");
+
+                const newPost = {
+                    userId: state.userId,
+                    authorUsername: state.currentUserData.username,
+                    authorRole: state.currentUserData.role,
+                    title,
+                    description,
+                    type,
+                    link,
+                    tagline: summary,
+                    likeCount: 0,
+                    likedBy: [],
+                    createdAt: serverTimestamp(),
+                };
+
+                await addDoc(postCollectionRef(), newPost);
+                
+                // Close modal and switch view
+                handleViewChange('feed');
+                showNotification(`Project "${title}" published! Tagline added by AI: "${summary}"`);
+
+            } catch (e) {
+                console.error("Error creating project:", e);
+                errorEl.textContent = e.message || "Failed to publish project. Please check your inputs.";
+                errorEl.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `Publish Project`;
+            }
+        }
+
+        // --- UI COMPONENT RENDERERS ---
+
+        function renderProjectCard(post) {
+            const user = state.allUsers.find(u => u.userId === post.userId) || { username: 'Unknown', role: 'Unknown' };
+            const liked = post.likedBy?.includes(state.userId) || false;
+
+            return `
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mb-6 transition-all hover:shadow-xl hover:scale-[1.005] duration-200">
+                    <div class="flex items-start mb-4">
+                        ${ICONS.defaultProfile('w-12 h-12')}
+                        <div class="ml-3">
+                            <p class="font-bold text-lg text-gray-900">${post.title}</p>
+                            <p class="text-xs text-blue-600 font-semibold mb-1">${post.tagline || ''}</p>
+                            <p class="text-sm text-gray-600">@${user.username} · <span class="text-xs text-gray-400">${post.authorRole}</span></p>
+                        </div>
+                    </div>
+
+                    <p class="text-gray-700 mb-4 text-sm">${post.description}</p>
+                    
+                    <!-- Project Link/Media -->
+                    <div class="mb-4 p-4 border border-blue-100 bg-blue-50 rounded-lg">
+                        <p class="text-xs font-semibold uppercase text-blue-600 mb-2 flex items-center">
+                            ${post.type === 'Repo' ? ICONS.gitBranch('w-4 h-4 mr-1') : ICONS.video('w-4 h-4 mr-1')}
+                            ${post.type === 'Repo' ? 'GitHub Repository' : 'Video Demo'}
+                        </p>
+                        <a href="${post.link}" target="_blank" class="block truncate text-blue-700 hover:text-blue-900 hover:underline font-medium text-sm">
+                            ${post.link}
+                        </a>
+                    </div>
+
+                    <!-- Actions Bar -->
+                    <div class="flex items-center justify-between border-t pt-3">
+                        <button 
+                            data-post-id="${post.id}" 
+                            data-is-liked="${liked}"
+                            class="like-btn flex items-center space-x-2 text-sm font-medium ${liked ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-700 transition duration-150">
+                            ${ICONS.thumbsUp('w-5 h-5', liked)}
+                            <span class="font-semibold">${post.likeCount || 0} Endorsements</span>
+                        </button>
+                        
+                        <p class="text-xs text-gray-400">${formatTimeAgo(post.createdAt)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderUserCard(user) {
+            const postCount = state.posts.filter(p => p.userId === user.userId).length;
+            
+            return `
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 flex flex-col items-center text-center transition-all hover:shadow-lg hover:border-blue-300">
+                    ${ICONS.defaultProfile('w-16 h-16 mb-3')}
+                    <p class="font-bold text-lg text-gray-900">@${user.username}</p>
+                    <p class="text-sm text-blue-600 font-medium mb-2">${user.role}</p>
+                    <p class="text-xs text-gray-500 mb-4 h-8 overflow-hidden">${user.bio}</p>
+                    
+                    <div class="flex space-x-4 text-sm text-gray-600 mb-4">
+                        <span class="flex items-center">${ICONS.briefcase('w-4 h-4 mr-1')} ${postCount} Projects</span>
+                        <span class="flex items-center">${ICONS.user('w-4 h-4 mr-1')} ${user.connections?.length || 0} Connections</span>
+                    </div>
+
+                    <button 
+                        data-user-id="${user.userId}" 
+                        class="connect-btn w-full px-4 py-2 bg-blue-500 text-white rounded-full font-semibold text-sm hover:bg-blue-600 transition-all">
+                        ${ICONS.plus('w-4 h-4 mr-1')} Connect
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderSidebar() {
+            const user = state.currentUserData;
+            const postCount = state.posts.filter(p => p.userId === user.userId).length;
+            const totalEndorsements = state.posts.filter(p => p.userId === user.userId).reduce((sum, p) => sum + (p.likeCount || 0), 0);
+
+            return `
+                <div class="sticky top-20">
+                    <!-- User Profile Card -->
+                    <div class="bg-white p-6 rounded-xl shadow-xl border border-gray-200 mb-6 text-center">
+                        ${ICONS.defaultProfile('w-20 h-20 mx-auto mb-4')}
+                        <h2 class="text-2xl font-extrabold text-gray-900">${user.displayName}</h2>
+                        <p class="text-sm text-gray-500 mb-4">@${user.username}</p>
+                        
+                        <div class="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 border border-gray-100 mb-4">
+                            <p class="font-semibold text-blue-600">${user.role}</p>
+                            <p class="mt-1 text-xs">${user.bio}</p>
+                        </div>
+
+                        <div class="flex justify-around text-center mt-4">
+                            <div>
+                                <p class="text-lg font-bold text-gray-900">${postCount}</p>
+                                <p class="text-xs text-gray-500">Projects</p>
+                            </div>
+                            <div>
+                                <p class="text-lg font-bold text-gray-900">${totalEndorsements}</p>
+                                <p class="text-xs text-gray-500">Endorsements</p>
+                            </div>
+                            <div>
+                                <p class="text-lg font-bold text-gray-900">${user.connections?.length || 0}</p>
+                                <p class="text-xs text-gray-500">Connections</p>
+                            </div>
+                        </div>
+                        
+                        <button onclick="handleViewChange('profile')" class="mt-4 w-full py-2 text-sm font-semibold text-blue-600 border border-blue-600 rounded-full hover:bg-blue-50 transition-colors">View Dashboard</button>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="bg-white p-4 rounded-xl shadow-md border border-gray-200">
+                        <button onclick="handleViewChange('create')" class="w-full flex items-center justify-center p-3 bg-blue-600 text-white rounded-lg font-bold text-base shadow-lg hover:bg-blue-700 transition-all transform hover:scale-[1.01] mb-3">
+                            ${ICONS.plus('w-5 h-5 mr-2')} Post New Project
+                        </button>
+                        <button onclick="signOut(state.auth)" class="w-full py-2 text-sm text-gray-500 hover:text-red-600 transition-colors">Sign Out</button>
+                        <p class="mt-3 text-[10px] text-gray-400 break-all">Your Public ID: ${state.userId}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- VIEW RENDERERS (Main Column) ---
+
+        function renderFeed() {
+            let feedHtml = state.posts.length > 0
+                ? state.posts.map(renderProjectCard).join('')
+                : `<div class="p-10 text-center bg-white rounded-xl shadow-lg mt-8 text-gray-600">
+                     <h3 class="text-xl font-bold mb-2">No projects yet!</h3>
+                     <p>Be the first to share your work.</p>
+                     <button onclick="handleViewChange('create')" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition">Post Project</button>
+                  </div>`;
+            
+            // Add the "New Post" button for mobile screens
+            const mobilePostButton = `
+                <button onclick="handleViewChange('create')" class="md:hidden fixed bottom-20 right-5 z-40 p-4 bg-blue-600 text-white rounded-full shadow-2xl transition-all transform hover:scale-110 active:scale-95">
+                    ${ICONS.plus('w-6 h-6')}
+                </button>
+            `;
+
+            renderLayout(`
+                <h1 class="text-2xl font-bold mb-6 hidden lg:block">Project Feed</h1>
+                ${feedHtml}
+                ${mobilePostButton}
+            `);
+
+            // Attach event listeners for liking posts
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const postId = btn.dataset.postId;
+                    const isLiked = btn.dataset.isLiked === 'true';
+                    handleLikePost(postId, isLiked);
+                };
+            });
+        }
+
+        function renderExplore() {
+            // Filter out the current user and users who haven't completed setup
+            const otherUsers = state.allUsers.filter(u => u.userId !== state.userId && u.isProfileSetup);
+
+            const exploreHtml = otherUsers.length > 0
+                ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                     ${otherUsers.map(renderUserCard).join('')}
+                  </div>`
+                : `<div class="p-10 text-center bg-white rounded-xl shadow-lg mt-8 text-gray-600">
+                     <h3 class="text-xl font-bold mb-2">Finding Talent...</h3>
+                     <p>Looks like you're the first one here! Check back soon.</p>
+                  </div>`;
+
+            renderLayout(`
+                <h1 class="text-2xl font-bold mb-6">Explore Developers</h1>
+                ${exploreHtml}
+            `);
+            
+            // Attach connection handler
+            document.querySelectorAll('.connect-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    const targetUserId = e.currentTarget.dataset.userId;
+                    // Simple placeholder connection logic
+                    showNotification(`Connected with @${otherUsers.find(u => u.userId === targetUserId)?.username || 'user'}! (Feature in development)`, 'success');
+                };
+            });
+        }
+
+        function renderProfile() {
+            const user = state.currentUserData;
+            const postCount = state.posts.filter(p => p.userId === user.userId).length;
+            const totalEndorsements = state.posts.filter(p => p.userId === user.userId).reduce((sum, p) => sum + (p.likeCount || 0), 0);
+            const userPostsHtml = state.posts
+                .filter(p => p.userId === user.userId)
+                .slice(0, 5) // Show top 5 recent posts as a list
+                .map(p => `<li class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm">
+                        <span class="font-medium text-gray-800 truncate">${truncateLabel(p.title)}</span>
+                        <span class="text-xs text-gray-500">${p.likeCount || 0} Endorsements</span>
+                    </li>`).join('');
+
+
+            renderLayout(`
+                <h1 class="text-2xl font-bold mb-6">Your Professional Dashboard</h1>
+                
+                <!-- Profile Summary Card -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mb-6">
+                    <div class="flex items-start">
+                        ${ICONS.defaultProfile('w-20 h-20 mr-4 flex-shrink-0')}
+                        <div>
+                            <h2 class="text-3xl font-extrabold text-gray-900">${user.displayName}</h2>
+                            <p class="text-lg text-blue-600 font-semibold mb-1">@${user.username}</p>
+                            <p class="text-gray-700">${user.role}</p>
+                        </div>
+                    </div>
+                    <p class="mt-4 p-3 bg-gray-50 rounded-lg text-sm italic text-gray-700 border border-gray-100">
+                        "${user.bio}"
+                    </p>
+                </div>
+
+                <!-- Metrics Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="p-4 bg-white rounded-lg shadow-md border-l-4 border-blue-600">
+                        <p class="text-xs text-gray-500 font-medium">Total Posts</p>
+                        <p class="text-2xl font-bold text-gray-900">${postCount}</p>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow-md border-l-4 border-blue-600">
+                        <p class="text-xs text-gray-500 font-medium">Total Endorsements</p>
+                        <p class="text-2xl font-bold text-gray-900">${totalEndorsements}</p>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow-md border-l-4 border-blue-600">
+                        <p class="text-xs text-gray-500 font-medium">Connections</p>
+                        <p class="text-2xl font-bold text-gray-900">${user.connections?.length || 0}</p>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow-md border-l-4 border-blue-600">
+                        <p class="text-xs text-gray-500 font-medium">Public ID</p>
+                        <p class="text-xs font-mono text-gray-700 truncate pt-1">${user.userId}</p>
+                    </div>
+                </div>
+
+                <!-- Chart and Recent Activity -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mb-6">
+                    <div class="chart-container">
+                        <canvas id="projectPerformanceChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4 border-b pb-2">Recent Projects</h3>
+                    <ul class="divide-y divide-gray-100">
+                        ${userPostsHtml || '<li class="text-gray-500 italic p-3">No projects posted yet.</li>'}
+                    </ul>
+                </div>
+            `);
+        }
+
+        function renderCreateModal() {
+            const modalEl = document.getElementById('create-project-modal');
+            if (!state.isModalOpen) {
+                modalEl.classList.add('hidden');
+                modalEl.innerHTML = '';
+                return;
+            }
+
+            modalEl.classList.remove('hidden');
+            
+            // Check if user profile is set up
+            if (!state.currentUserData?.isProfileSetup) {
+                 modalEl.innerHTML = `
+                    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg text-center">
+                        <h2 class="text-2xl font-bold text-red-600 mb-3">Profile Incomplete</h2>
+                        <p class="text-gray-600 mb-6">You must complete your unique username and profile setup before posting a project.</p>
+                        <button onclick="handleViewChange('profile')" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">Go to Profile Setup</button>
+                    </div>
+                `;
+                return;
+            }
+
+            modalEl.innerHTML = `
+                <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-xl">
+                    <div class="flex justify-between items-start mb-6 border-b pb-3">
+                        <h2 class="text-2xl font-bold text-gray-900">Post New Project</h2>
+                        <button onclick="handleViewChange('feed')" class="text-gray-400 hover:text-gray-700 transition">
+                            ${ICONS.xCircle('w-6 h-6')}
+                        </button>
+                    </div>
+                    
+                    <form id="create-project-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="project-title">Project Title</label>
+                            <input type="text" id="project-title" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., Real-time AI Chatbot v2.0" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="project-description">Detailed Description (Explaining process/tech stack)</label>
+                            <textarea id="project-description" class="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-blue-500 focus:border-blue-500" placeholder="Describe the problem, solution, and technologies used..." required></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="project-type">Project Media Type</label>
+                            <select id="project-type" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="Repo">GitHub/Code Repository</option>
+                                <option value="Video">Video Demo Link</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="project-link">Link (URL to Repo or Video)</label>
+                            <input type="url" id="project-link" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="https://github.com/my-project" required>
+                        </div>
+
+                        <div id="create-project-error" class="hidden bg-red-100 text-red-700 p-3 rounded-lg text-sm font-medium border border-red-300"></div>
+
+                        <button type="submit" id="submit-project-btn" class="w-full mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold text-lg shadow-xl hover:bg-blue-700 transition-all">
+                            Publish Project
+                        </button>
+                    </form>
+                </div>
+            `;
+            
+            // Attach form submission listener
+            document.getElementById('create-project-form').onsubmit = (e) => {
+                e.preventDefault();
+                handleCreateProject();
+            };
+        }
+
+
+        // --- NAVIGATION RENDERERS ---
+
+        const navItems = [
+            { view: 'feed', label: 'Feed', icon: ICONS.home },
+            { view: 'explore', label: 'Explore', icon: ICONS.search },
+            { view: 'create', label: 'Post', icon: ICONS.plus }, 
+            { view: 'profile', label: 'Dashboard', icon: ICONS.user },
+        ];
+
+        function renderDesktopNav() {
+            const desktopNavEl = document.getElementById('desktop-nav');
+            const navHtml = navItems.filter(item => item.view !== 'create').map(item => {
+                const isActive = state.view === item.view || (state.view === 'create' && item.view === 'feed');
+                const classes = `
+                    flex items-center px-4 py-2 rounded-lg font-medium text-sm transition-all
+                    ${isActive ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'}
+                `;
+                return `
+                    <button onclick="handleViewChange('${item.view}')" class="${classes}">
+                        ${item.icon('w-5 h-5 mr-2')}
+                        ${item.label}
+                    </button>
+                `;
+            }).join('');
+
+            // Add Create Post button separately for visual distinction on desktop
+            const createButton = `
+                <button onclick="handleViewChange('create')" class="ml-4 hidden md:flex items-center px-4 py-2 bg-blue-600 text-white rounded-full font-bold text-sm shadow-md hover:bg-blue-700 transition-colors transform hover:scale-[1.05]">
+                    ${ICONS.plus('w-5 h-5 mr-1')} Post
+                </button>
+                <button onclick="signOut(state.auth)" class="ml-2 p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+                </button>
+            `;
+
+            desktopNavEl.innerHTML = navHtml + createButton;
+        }
+
+        function renderMobileNav() {
+            const mobileNavEl = document.getElementById('mobile-bottom-nav');
+            
+            const navHtml = navItems.map(item => {
+                const isActive = state.view === item.view || (state.view === 'create' && item.view === 'feed');
+                const isSpecialButton = item.view === 'create';
+                
+                const classes = `
+                    flex flex-col items-center justify-center p-2 text-xs font-medium transition-colors 
+                    ${isActive && !isSpecialButton ? 'text-blue-700' : 'text-gray-500 hover:text-blue-600'}
+                `;
+
+                if (isSpecialButton) {
+                    return `
+                        <div class="-mt-6">
+                          <button onclick="handleViewChange('${item.view}')" class="p-3 bg-blue-600 text-white rounded-full shadow-xl border-4 border-white transform hover:scale-105 transition-transform active:scale-95">
+                              ${item.icon('w-6 h-6')}
+                          </button>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <button onclick="handleViewChange('${item.view}')" class="${classes}">
+                        ${item.icon('w-6 h-6 mb-1')}
+                        ${item.label}
+                    </button>
+                `;
+            }).join('');
+
+            mobileNavEl.innerHTML = `
+                <div class="flex justify-around h-16 w-full max-w-md mx-auto">
+                    ${navHtml}
+                </div>
+            `;
+            
+            // Add a simple profile icon/logout option for mobile top right
+            const profileIconEl = document.getElementById('mobile-nav-profile-icon');
+            profileIconEl.innerHTML = `
+                <button onclick="signOut(state.auth)" class="p-1 rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+                </button>
+            `;
+        }
+
+        // --- INITIALIZATION ---
+
+        window.onload = function () {
+            console.log("App loaded. Initializing Firebase.");
+            
+            // Initial render for the loading state
+            render();
+            
+            initFirebase();
+            
+            // Attach dynamic event delegation for sign-in, logo, and profile setup
+            document.body.addEventListener('click', (e) => {
+                if (state.view === 'signin' && e.target.closest('#google-sign-in-btn')) {
+                    e.preventDefault();
+                    signInWithGoogle();
+                } else if (state.view === 'auth' && e.target.closest('#complete-setup-btn')) {
+                    e.preventDefault();
+                    handleAuthSetup();
+                } else if (e.target.closest('#logo-button')) {
+                    handleViewChange('feed');
+                }
+            });
+        };
+    </script>
+</body>
+</html>
